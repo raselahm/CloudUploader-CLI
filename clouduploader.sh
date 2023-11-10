@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Check if GPG is installed
+if ! command -v gpg &> /dev/null; then
+    echo "GPG is not installed. Please install GPG to use this tool and read the README.md"
+    exit 1
+fi
+
 # Function to encrypt a file using GPG
 encrypt_file() {
     local file_path=$1
