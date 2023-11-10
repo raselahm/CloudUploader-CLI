@@ -4,12 +4,16 @@
 upload_to_s3() {
     local file_path=$1
     local bucket_name=$2
+    local file_name=$(basename "$file_path")
 
     echo "Uploading $file_path to S3 bucket: $bucket_name..."
-    aws s3 cp "$file_path" "s3://$bucket_name/"
+    aws s3 cp "$file_path" "s3://$bucket_name/$file_name"
 
     if [ $? -eq 0 ]; then
         echo "Upload successful for $file_path."
+        # Generate and display a presigned URL, expires in an hour
+        local presigned_url=$(aws s3 presign "s3://$bucket_name/$file_name" --expires-in 3600)
+        echo "Shareable link (expires in 1 hour): $presigned_url"
     else
         echo "Upload failed for $file_path."
         return 1
