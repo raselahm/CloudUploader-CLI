@@ -1,7 +1,7 @@
 # CloudUploader CLI
 
 ## Overview
-CloudUploader CLI is a bash-based tool designed for secure and easy uploading of files to cloud storage services.
+CloudUploader CLI is a bash-based tool designed for secure and easy uploading of files to Amazon S3.
 
 ## Prerequisites
 - Bash (Git Bash for Windows)
