@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Function to encrypt a file using GPG
+encrypt_file() {
+    local file_path=$1
+    local encrypted_file_path="${file_path}.gpg"
+    
+    # Prompt for the passphrase and encrypt the file
+    gpg --symmetric --cipher-algo AES256 --output "$encrypted_file_path" "$file_path"
+    
+    # Return the path of the encrypted file
+    echo "$encrypted_file_path"
+}
+
 # Function to check if a file exists in the S3 bucket
 file_exists_in_s3() {
     aws s3 ls "s3://$1/$2" > /dev/null 2>&1
@@ -47,14 +59,15 @@ if ! aws s3 ls "s3://$BUCKET_NAME" > /dev/null 2>&1; then
     exit 1
 fi
 
-# Iterate over each file provided and upload it but allow overwrite, skip, rename, rename & replace functionality
+# Iterate over each file provided and upload it
 for file in "$@"; do
     if [ ! -f "$file" ]; then
         echo "Error: File does not exist at path '$file'."
         continue
     fi
 
-    file_name=$(basename "$file")
+    encrypted_file=$(encrypt_file "$file")
+    file_name=$(basename "$encrypted_file")
 
     if file_exists_in_s3 "$BUCKET_NAME" "$file_name"; then
         echo "File $file_name already exists in $BUCKET_NAME."
@@ -63,30 +76,39 @@ for file in "$@"; do
 
         case $user_choice in
             [Oo]* ) 
-                upload_to_s3 "$file" "$BUCKET_NAME" "$file_name"
+                upload_to_s3 "$encrypted_file" "$BUCKET_NAME" "$file_name"
+                rm "$encrypted_file"
                 ;;
             [Ss]* ) 
                 echo "Skipping $file_name."
+                rm "$encrypted_file"
                 ;;
             [Rr]* ) 
                 echo "Enter new file name:"
                 read -r new_file_name
-                upload_to_s3 "$file" "$BUCKET_NAME" "$new_file_name"
+                upload_to_s3 "$encrypted_file" "$BUCKET_NAME" "${new_file_name}.gpg"
+                rm "$encrypted_file"
                 ;;
             [Nn]* )
                 echo "Enter new file name for replacement:"
                 read -r replace_file_name
                 aws s3 rm "s3://$BUCKET_NAME/$file_name"
-                upload_to_s3 "$file" "$BUCKET_NAME" "$replace_file_name"
+                upload_to_s3 "$encrypted_file" "$BUCKET_NAME" "${replace_file_name}.gpg"
+                rm "$encrypted_file"
                 ;;
             * )
                 echo "Invalid option. Skipping $file_name."
+                rm "$encrypted_file"
                 ;;
         esac
     else
-        upload_to_s3 "$file" "$BUCKET_NAME" "$file_name"
+        upload_to_s3 "$encrypted_file" "$BUCKET_NAME" "$file_name"
+        rm "$encrypted_file"
     fi
 done
+
+
+
 
 
 
